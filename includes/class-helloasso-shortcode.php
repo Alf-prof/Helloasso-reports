@@ -1,0 +1,332 @@
+<?php
+/**
+ * Classe de gestion du shortcode
+ * Version améliorée avec affichage d'un événement unique
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+class HelloAsso_Shortcode {
+    
+    private $api;
+    
+    public function __construct($api) {
+        $this->api = $api;
+        add_shortcode('helloasso_events', array($this, 'display_events'));
+        add_shortcode('helloasso_event', array($this, 'display_single_event'));
+    }
+    
+    /**
+     * Afficher UN SEUL événement avec ses statistiques
+     * 
+     * Attributs :
+     * - slug (obligatoire) : Le slug de l'événement
+     * - display : "full" (défaut), "count", "details"
+     * - total_places : nombre total de places (pour afficher les places restantes)
+     * 
+     * Exemples :
+     * [helloasso_event slug="mon-evenement"]
+     * [helloasso_event slug="mon-evenement" display="count"]
+     * [helloasso_event slug="mon-evenement" display="details"]
+     * [helloasso_event slug="mon-evenement" total_places="100"]
+     */
+    public function display_single_event($atts) {
+        $atts = shortcode_atts(array(
+            'slug' => '',
+            'display' => 'full',  // full, count, details
+            'total_places' => 0
+        ), $atts);
+        
+        // Vérifier que le slug est fourni
+        if (empty($atts['slug'])) {
+            return '<p class="helloasso-error">⚠️ Erreur : vous devez spécifier l\'attribut "slug" de l\'événement.</p>';
+        }
+        
+        try {
+            $event_slug = sanitize_text_field($atts['slug']);
+            $display_mode = sanitize_text_field($atts['display']);
+            $total_places = intval($atts['total_places']);
+            
+            // Récupérer les détails de l'événement
+            $event_details = $this->api->get_event_details($event_slug);
+            
+            if (!$event_details) {
+                return '<p class="helloasso-error">❌ Événement "' . esc_html($event_slug) . '" introuvable.</p>';
+            }
+            
+            // Récupérer les statistiques de réservation
+            $sold_data = $this->api->get_event_sold_count($event_slug, false);
+            
+            $title = esc_html($event_details['title']);
+            $places_sold = $sold_data['sold'];
+            $tiers = $sold_data['tiers'];
+            
+            ob_start();
+            
+            // MODE 1 : Afficher uniquement le nombre total
+            if ($display_mode === 'count') {
+                ?>
+                <div class="helloasso-event-count">
+                    <span class="event-sold-count"><?php echo $places_sold; ?></span>
+                    <?php if ($total_places > 0): ?>
+                        <span class="event-total-places"> / <?php echo $total_places; ?></span>
+                    <?php endif; ?>
+                </div>
+                <?php
+            }
+            
+            // MODE 2 : Afficher uniquement les détails par catégorie
+            elseif ($display_mode === 'details') {
+                ?>
+                <div class="helloasso-event-details">
+                    <?php if (!empty($tiers) && count($tiers) > 0): ?>
+                        <div class="tickets-detail">
+                            <?php foreach ($tiers as $tier_name => $tier_count): ?>
+                                <div class="tier-item">
+                                    <span class="tier-name"><?php echo esc_html($tier_name); ?></span>
+                                    <span class="tier-count"><?php echo $tier_count; ?> place<?php echo $tier_count > 1 ? 's' : ''; ?></span>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <p class="no-registration">Aucune inscription pour le moment</p>
+                    <?php endif; ?>
+                </div>
+                <?php
+            }
+            
+            // MODE 3 (défaut) : Affichage complet avec ou sans places restantes
+            else {
+                // Si total_places est spécifié, on affiche les places restantes
+                if ($total_places > 0) {
+                    $places_remaining = max(0, $total_places - $places_sold);
+                    $percentage = ($total_places > 0) ? round(($places_sold / $total_places) * 100) : 0;
+                    $is_sold_out = ($places_remaining === 0);
+                    ?>
+                    <div class="helloasso-event-single <?php echo $is_sold_out ? 'sold-out' : ''; ?>">
+                        <h3 class="event-title"><?php echo $title; ?></h3>
+                        
+                        <div class="event-tickets">
+                            <div class="tickets-stats">
+                                <div class="stat-item">
+                                    <span class="stat-label">Places vendues</span>
+                                    <span class="stat-value sold"><?php echo $places_sold; ?></span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Places restantes</span>
+                                    <span class="stat-value remaining <?php echo $is_sold_out ? 'zero' : ''; ?>">
+                                        <?php echo $places_remaining; ?>
+                                    </span>
+                                </div>
+                                <div class="stat-item">
+                                    <span class="stat-label">Total</span>
+                                    <span class="stat-value total"><?php echo $total_places; ?></span>
+                                </div>
+                            </div>
+                            
+                            <?php if ($is_sold_out): ?>
+                                <div class="sold-out-badge">COMPLET</div>
+                            <?php endif; ?>
+                            
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: <?php echo $percentage; ?>%;"></div>
+                            </div>
+                            <p class="progress-text"><?php echo $percentage; ?>% vendu</p>
+                        </div>
+                        
+                        <?php if (isset($event_details['url'])): ?>
+                            <a href="<?php echo esc_url($event_details['url']); ?>" target="_blank" class="event-link" rel="noopener">
+                                <?php echo $is_sold_out ? 'Voir l\'événement' : 'Réserver →'; ?>
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                    <?php
+                }
+                // Sinon, affichage avec détails par catégorie
+                else {
+                    ?>
+                    <div class="helloasso-event-single">
+                        <h3 class="event-title"><?php echo $title; ?></h3>
+                        
+                        <?php if ($places_sold > 0): ?>
+                            <div class="event-tickets">
+                                <p class="tickets-total"><strong>🎟️ Places vendues :</strong> 
+                                    <span class="tickets-count"><?php echo $places_sold; ?></span>
+                                </p>
+                                
+                                <?php if (!empty($tiers) && count($tiers) > 1): ?>
+                                    <div class="tickets-detail">
+                                        <p style="font-weight: 600; margin: 10px 0 5px 0; font-size: 0.95em;">Détail par catégorie :</p>
+                                        <?php foreach ($tiers as $tier_name => $tier_count): ?>
+                                            <div class="tier-item">
+                                                <span class="tier-name"><?php echo esc_html($tier_name); ?></span>
+                                                <span class="tier-count"><?php echo $tier_count; ?> place<?php echo $tier_count > 1 ? 's' : ''; ?></span>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php elseif (!empty($tiers)): ?>
+                                    <p style="color: #666; font-size: 0.9em; margin-top: 5px;">
+                                        Catégorie : <?php echo esc_html(key($tiers)); ?>
+                                    </p>
+                                <?php endif; ?>
+                            </div>
+                        <?php else: ?>
+                            <p class="no-registration">Aucune inscription pour le moment</p>
+                        <?php endif; ?>
+                        
+                        <?php if (isset($event_details['url'])): ?>
+                            <a href="<?php echo esc_url($event_details['url']); ?>" target="_blank" class="event-link" rel="noopener">
+                                Voir l'événement →
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                    <?php
+                }
+            }
+            
+            return ob_get_clean();
+            
+        } catch (Exception $e) {
+            return '<p class="helloasso-error">Erreur : ' . esc_html($e->getMessage()) . '</p>';
+        }
+    }
+    
+    /**
+     * Afficher les événements via shortcode (version originale améliorée)
+     */
+    public function display_events($atts) {
+        $atts = shortcode_atts(array(
+            'limit' => 10,
+            'show_sold_out' => 'yes',
+            'future_only' => 'no',
+            'has_bookings_only' => 'no'
+        ), $atts);
+        
+        try {
+            $events_data = $this->api->get_events();
+            
+            if (!$events_data || !isset($events_data['data']) || empty($events_data['data'])) {
+                return '<p class="helloasso-no-events">Aucun événement à afficher pour le moment.</p>';
+            }
+            
+            // Trier par date croissante
+            $events = $events_data['data'];
+            usort($events, function($a, $b) {
+                $date_a = isset($a['startDate']) ? strtotime($a['startDate']) : 0;
+                $date_b = isset($b['startDate']) ? strtotime($b['startDate']) : 0;
+                return $date_a - $date_b;
+            });
+            
+            // Filtrer les événements futurs si demandé
+            if ($atts['future_only'] === 'yes') {
+                $now = current_time('timestamp');
+                $filtered_events = array();
+                foreach ($events as $event) {
+                    $date_to_check = !empty($event['endDate']) ? $event['endDate'] : (!empty($event['startDate']) ? $event['startDate'] : null);
+                    
+                    if ($date_to_check) {
+                        $event_time = strtotime($date_to_check);
+                        if ($event_time > $now) {
+                            $filtered_events[] = $event;
+                        }
+                    }
+                }
+                $events = $filtered_events;
+            }
+            
+            ob_start();
+            ?>
+            <div class="helloasso-events-container">
+                <?php
+                $count = 0;
+                $debug_mode = isset($_GET['debug_ha']);
+                
+                foreach ($events as $event):
+                    if ($count >= $atts['limit']) break;
+                    
+                    $details = $this->api->get_event_details($event['formSlug']);
+                    $sold_data = $this->api->get_event_sold_count($event['formSlug'], $debug_mode);
+                    
+                    // Filtrer par réservations si demandé
+                    if ($atts['has_bookings_only'] === 'yes' && $sold_data['sold'] <= 0) {
+                        continue;
+                    }
+                    
+                    $title = esc_html($event['title']);
+                    $start_date_val = !empty($event['startDate']) ? $event['startDate'] : '';
+                    $start_date = $start_date_val ? date('d/m/Y', strtotime($start_date_val)) : 'Date non définie';
+                    $state = esc_html($event['state']);
+                    $url_val = isset($event['url']) ? $event['url'] : '#';
+                    $url = esc_url($url_val);
+                    
+                    if ($debug_mode) {
+                        echo '<pre style="background: #f0f0f0; padding: 10px; font-size: 11px; margin: 10px 0;">';
+                        echo 'Event slug : ' . esc_html($event['formSlug']) . "\n";
+                        echo 'Places vendues (total) : ' . $sold_data['sold'] . "\n";
+                        echo 'Détail par tarif : ' . json_encode($sold_data['tiers'], JSON_UNESCAPED_UNICODE) . "\n";
+                        echo '</pre>';
+                    }
+                    
+                    $places_sold = $sold_data['sold'];
+                    $is_sold_out = false;
+                    
+                    if ($is_sold_out && $atts['show_sold_out'] === 'no') {
+                        continue;
+                    }
+                    
+                    $count++;
+                    ?>
+                    <div class="helloasso-event <?php echo $is_sold_out ? 'sold-out' : ''; ?>">
+                        <div class="event-header">
+                            <h3 class="event-title"><?php echo $title; ?></h3>
+                            <span class="event-state state-<?php echo strtolower($state); ?>"><?php echo $state; ?></span>
+                        </div>
+                        
+                        <div class="event-info">
+                            <p class="event-date">
+                                <strong>📅 Date :</strong> <?php echo $start_date; ?>
+                            </p>
+                            
+                            <?php if ($places_sold > 0): ?>
+                                <div class="event-tickets">
+                                    <p class="tickets-total"><strong>🎟️ Total places vendues :</strong> 
+                                        <span class="tickets-count"><?php echo $places_sold; ?></span>
+                                    </p>
+                                    
+                                    <?php if (!empty($sold_data['tiers']) && count($sold_data['tiers']) > 1): ?>
+                                        <div class="tickets-detail">
+                                            <p style="font-weight: 600; margin: 10px 0 5px 0; font-size: 0.95em;">Détail par catégorie :</p>
+                                            <?php foreach ($sold_data['tiers'] as $tier_name => $tier_count): ?>
+                                                <div class="tier-item">
+                                                    <span class="tier-name"><?php echo esc_html($tier_name); ?></span>
+                                                    <span class="tier-count"><?php echo $tier_count; ?> place<?php echo $tier_count > 1 ? 's' : ''; ?></span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php elseif (!empty($sold_data['tiers'])): ?>
+                                        <p style="color: #666; font-size: 0.9em; margin-top: 5px;">
+                                            Catégorie : <?php echo esc_html(key($sold_data['tiers'])); ?>
+                                        </p>
+                                    <?php endif; ?>
+                                </div>
+                            <?php else: ?>
+                                <p class="no-registration">Aucune inscription pour le moment</p>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <a href="<?php echo $url; ?>" target="_blank" class="event-link" rel="noopener">
+                            Voir l'événement →
+                        </a>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <?php
+            return ob_get_clean();
+            
+        } catch (Exception $e) {
+            return '<p class="helloasso-error">Erreur lors du chargement des événements : ' . esc_html($e->getMessage()) . '</p>';
+        }
+    }
+}
