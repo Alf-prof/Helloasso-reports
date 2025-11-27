@@ -122,7 +122,7 @@ class HelloAsso_API {
      * Récupérer les événements
      */
     public function get_events($debug = false) {
-        // Vérifier le cache (5 minutes)
+        // Vérifier le cache (24h)
         $cached_events = get_transient('helloasso_events_cache');
         if ($cached_events && !$debug) {
             return $cached_events;
@@ -176,8 +176,8 @@ class HelloAsso_API {
             throw new Exception('Erreur lors du décodage JSON des événements : ' . json_last_error_msg());
         }
         
-        // Mettre en cache (5 minutes)
-        set_transient('helloasso_events_cache', $data, 300);
+        // Mettre en cache (24h)
+        set_transient('helloasso_events_cache', $data, 86400);
         
         return $data;
     }
@@ -227,7 +227,7 @@ class HelloAsso_API {
             return null;
         }
         
-        set_transient($cache_key, $data, 300);
+        set_transient($cache_key, $data, 86400);
         return $data;
     }
     
@@ -548,8 +548,8 @@ class HelloAsso_API {
                 echo '</div>';
             }
             
-            // Mettre en cache (5 minutes)
-            set_transient($cache_key, $result_data, 300);
+            // Mettre en cache (24h)
+            set_transient($cache_key, $result_data, 86400);
             
             return $result_data;
             

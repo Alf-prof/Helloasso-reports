@@ -65,19 +65,16 @@ define('HELLOASSO_ORGANIZATION_SLUG', 'votre_organization_slug');
 Le plugin ajoute un menu **"HelloAsso"** avec 3 sous-menus :
 
 #### 1. **Présentation**
-
 - Vue d'ensemble de la configuration
 - Vérification des identifiants
 - Instructions d'utilisation du shortcode
 
 #### 2. **Tests**
-
 - Test de connexion à l'API HelloAsso
 - Test d'envoi d'email
 - Vider les caches
 
 #### 3. **Rapports email**
-
 - Configuration des destinataires
 - Programmation d'envois à dates précises
 - Liste des envois programmés
@@ -171,7 +168,6 @@ Pour chaque événement :
 ## 📝 Changelog
 
 ### Version 2.0.0
-
 - ✅ Refactorisation complète en classes séparées
 - ✅ Menu réorganisé (Présentation, Tests, Rapports email)
 - ✅ Programmation d'envois à dates précises
@@ -179,7 +175,6 @@ Pour chaque événement :
 - ✅ Debug amélioré
 
 ### Version 1.0.0
-
 - Version initiale
 
 ## 📄 Licence
