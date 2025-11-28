@@ -49,12 +49,26 @@ if (isset($_POST['test_connection']) && check_admin_referer('helloasso_test_conn
     echo '</div>';
 }
 
-// Traiter le test d'email
-if (isset($_POST['send_test_email']) && check_admin_referer('helloasso_test_email', 'helloasso_email_nonce')) {
+// Traiter le test d'email simple
+if (isset($_POST['send_simple_test_email']) && check_admin_referer('helloasso_simple_test_email', 'helloasso_simple_email_nonce')) {
+    try {
+        $result = $plugin->email->send_simple_test_email();
+        if ($result) {
+            echo '<div class="notice notice-success"><p>✓ Email de test simple envoyé avec succès ! Vérifiez votre boîte de réception.</p></div>';
+        } else {
+            echo '<div class="notice notice-error"><p>✗ Erreur lors de l\'envoi. Vérifiez que wp_mail() fonctionne sur votre serveur.</p></div>';
+        }
+    } catch (Exception $e) {
+        echo '<div class="notice notice-error"><p>✗ Erreur : ' . esc_html($e->getMessage()) . '</p></div>';
+    }
+}
+
+// Traiter le test d'email avec événements
+if (isset($_POST['send_full_test_email']) && check_admin_referer('helloasso_full_test_email', 'helloasso_full_email_nonce')) {
     try {
         $result = $plugin->email->send_report(true);
         if ($result) {
-            echo '<div class="notice notice-success"><p>✓ Email de test envoyé avec succès !</p></div>';
+            echo '<div class="notice notice-success"><p>✓ Email de test avec événements envoyé avec succès ! Vérifiez votre boîte de réception.</p></div>';
         } else {
             echo '<div class="notice notice-error"><p>✗ Erreur lors de l\'envoi. Vérifiez que wp_mail() fonctionne sur votre serveur.</p></div>';
         }
@@ -215,33 +229,54 @@ define('HELLOASSO_ORGANIZATION_SLUG', 'votre_organization_slug_ici');</pre>
         
         <hr>
         
-        <h3>Test d'envoi d'email</h3>
+        <h3>Tests d'envoi d'email</h3>
         
+        <?php
+        $email_settings = $plugin->email->get_settings();
+        $recipients = $email_settings['email_recipients'] ?? get_option('admin_email');
+        ?>
+        
+        <!-- Test Email Simple -->
+        <div style="background: #e3f2fd; border: 2px solid #2196F3; padding: 20px; border-radius: 5px; margin: 20px 0;">
+            <h4 style="margin-top: 0; color: #2196F3;">📧 Test 1 : Email simple (recommandé en premier)</h4>
+            <p>Ce test vérifie la configuration email de base de WordPress <strong>sans</strong> récupérer les événements HelloAsso.</p>
+            <p><strong>Utilisation :</strong> Commencez par ce test pour vérifier que votre serveur peut envoyer des emails.</p>
+            
+            <p style="background: white; padding: 10px; border-radius: 3px; margin: 15px 0;">
+                <strong>Destinataires :</strong> <?php echo esc_html($recipients); ?>
+            </p>
+            
+            <form method="post" action="">
+                <?php wp_nonce_field('helloasso_simple_test_email', 'helloasso_simple_email_nonce'); ?>
+                <input type="submit" name="send_simple_test_email" class="button button-primary" value="📨 Envoyer un email de test simple">
+            </form>
+        </div>
+        
+        <!-- Test Email Complet -->
         <div style="background: #f9f9f9; padding: 20px; border-radius: 5px; margin: 20px 0;">
-            <p>Ce test envoie un email avec les 3 prochains événements aux destinataires configurés.</p>
+            <h4 style="margin-top: 0;">📊 Test 2 : Email avec événements HelloAsso</h4>
+            <p>Ce test envoie un email avec les 3 prochains événements HelloAsso et leurs statistiques.</p>
+            <p><strong>Utilisation :</strong> Une fois le test simple réussi, utilisez ce test pour vérifier que tout fonctionne ensemble.</p>
             
-            <?php
-            $email_settings = $plugin->email->get_settings();
-            $recipients = $email_settings['email_recipients'] ?? get_option('admin_email');
-            ?>
-            
-            <p><strong>Destinataires actuels :</strong> <?php echo esc_html($recipients); ?></p>
+            <p style="background: white; padding: 10px; border-radius: 3px; margin: 15px 0;">
+                <strong>Destinataires :</strong> <?php echo esc_html($recipients); ?>
+            </p>
             <p><small>Pour modifier les destinataires, allez dans "Rapports email"</small></p>
             
             <form method="post" action="">
-                <?php wp_nonce_field('helloasso_test_email', 'helloasso_email_nonce'); ?>
-                <input type="submit" name="send_test_email" class="button button-secondary" value="📨 Envoyer un email de test">
+                <?php wp_nonce_field('helloasso_full_test_email', 'helloasso_full_email_nonce'); ?>
+                <input type="submit" name="send_full_test_email" class="button button-secondary" value="📬 Envoyer un email de test complet">
             </form>
-            
-            <div class="notice notice-warning inline" style="margin-top: 20px;">
-                <p><strong>⚠️ Dépannage :</strong> Si l'envoi de test échoue :</p>
-                <ul>
-                    <li>Vérifiez que PHP peut envoyer des emails (fonction <code>mail()</code>)</li>
-                    <li>Installez un plugin SMTP comme "WP Mail SMTP" ou "Post SMTP"</li>
-                    <li>Vérifiez vos logs d'erreurs PHP</li>
-                    <li>Vérifiez le dossier spam de votre boîte mail</li>
-                </ul>
-            </div>
+        </div>
+        
+        <div class="notice notice-warning inline" style="margin-top: 20px;">
+            <p><strong>⚠️ Dépannage :</strong> Si les tests d'envoi échouent :</p>
+            <ul>
+                <li>Vérifiez que PHP peut envoyer des emails (fonction <code>mail()</code>)</li>
+                <li>Installez un plugin SMTP comme "WP Mail SMTP" ou "Post SMTP"</li>
+                <li>Vérifiez vos logs d'erreurs PHP</li>
+                <li>Vérifiez le dossier spam de votre boîte mail</li>
+            </ul>
         </div>
         
         <hr>
@@ -355,9 +390,10 @@ define('HELLOASSO_ORGANIZATION_SLUG', 'votre_organization_slug_ici');</pre>
             <div style="padding: 20px 0;">
                 <h4>Vérifications :</h4>
                 <ol style="line-height: 2;">
+                    <li>Commencez par le <strong>test d'email simple</strong> dans l'onglet "Tests"</li>
                     <li>Vérifier que les rapports sont activés dans "HelloAsso > Rapports email"</li>
                     <li>Vérifier qu'au moins un destinataire est configuré</li>
-                    <li>Tester l'envoi immédiat dans l'onglet "Tests"</li>
+                    <li>Si le test simple réussit, essayez le test complet avec événements</li>
                     <li>Vérifier que le CRON est bien configuré et s'exécute</li>
                     <li>Consulter les logs PHP (voir onglet "Informations Système")</li>
                     <li>Installer un plugin SMTP fiable (WP Mail SMTP, Post SMTP)</li>
@@ -711,4 +747,4 @@ details[open] > div {
     padding: 12px;
     margin: 15px 0;
 }
-</style><?php
+</style>
