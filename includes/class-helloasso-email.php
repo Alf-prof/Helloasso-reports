@@ -199,7 +199,94 @@ class HelloAsso_Email {
     }
     
     /**
+     * Envoyer un email de test simple (sans récupération d'événements)
+     */
+    public function send_simple_test_email() {
+        try {
+            $settings = $this->get_settings();
+            
+            if (empty($settings['email_recipients'])) {
+                throw new Exception('Aucun destinataire configuré');
+            }
+            
+            $subject = '[TEST SIMPLE] Email de test HelloAsso - ' . date_i18n('d/m/Y H:i:s');
+            
+            $message = '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background: #28a745; color: white; padding: 20px; text-align: center; border-radius: 5px; }
+        .content { background: #f9f9f9; padding: 20px; margin: 20px 0; border-radius: 5px; }
+        .footer { text-align: center; padding: 20px; color: #999; font-size: 0.9em; }
+        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Email de Test Simple</h1>
+            <p>Plugin HelloAsso Events Reports</p>
+        </div>
+        
+        <div class="content">
+            <div class="success">
+                <strong>✓ Succès !</strong> Si vous recevez cet email, votre configuration email fonctionne correctement.
+            </div>
+            
+            <h2>Informations du test</h2>
+            <ul>
+                <li><strong>Date et heure :</strong> ' . date_i18n('d/m/Y à H:i:s') . '</li>
+                <li><strong>Site WordPress :</strong> ' . get_bloginfo('name') . '</li>
+                <li><strong>URL du site :</strong> ' . get_bloginfo('url') . '</li>
+                <li><strong>Fuseau horaire :</strong> ' . wp_timezone_string() . '</li>
+            </ul>
+            
+            <h3>📌 Prochaines étapes</h3>
+            <p>Maintenant que l\'envoi d\'email fonctionne, vous pouvez tester l\'envoi complet avec récupération des événements HelloAsso.</p>
+        </div>
+        
+        <div class="footer">
+            <p>Email de test envoyé depuis ' . get_bloginfo('name') . '</p>
+            <p><small>Plugin HelloAsso Events Reports v' . HELLOASSO_VERSION . '</small></p>
+        </div>
+    </div>
+</body>
+</html>';
+            
+            $headers = array(
+                'Content-Type: text/html; charset=UTF-8',
+                'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+            );
+            
+            $recipients = array_map('trim', explode(',', $settings['email_recipients']));
+            
+            error_log('HelloAsso Simple Test Email - Recipients: ' . implode(', ', $recipients));
+            
+            $result = wp_mail($recipients, $subject, $message, $headers);
+            
+            if (!$result) {
+                global $phpmailer;
+                if (isset($phpmailer) && $phpmailer->ErrorInfo) {
+                    throw new Exception('Erreur PHPMailer: ' . $phpmailer->ErrorInfo);
+                } else {
+                    throw new Exception('wp_mail() a retourné false. Vérifiez la configuration email du serveur.');
+                }
+            }
+            
+            return $result;
+            
+        } catch (Exception $e) {
+            error_log('HelloAsso Simple Test Email Error: ' . $e->getMessage());
+            throw $e;
+        }
+    }
+    
+    /**
      * Envoyer le rapport par email (pour les tests)
+     * CORRIGÉ : Limite à 3 événements pour les tests
      */
     public function send_report($is_test = false) {
         try {
@@ -209,7 +296,12 @@ class HelloAsso_Email {
                 throw new Exception('Aucun destinataire configuré');
             }
             
-
+            // Récupérer les événements
+            $events_data = $this->api->get_events();
+            
+            if (!$events_data || !isset($events_data['data']) || empty($events_data['data'])) {
+                throw new Exception('Aucun événement trouvé dans HelloAsso');
+            }
             
             // Trier par date
             $events = $events_data['data'];
@@ -219,11 +311,14 @@ class HelloAsso_Email {
                 return $date_a - $date_b;
             });
             
-
+            // ✅ CORRECTION : Limiter à 3 événements pour le test
+            if ($is_test) {
+                $events = array_slice($events, 0, 3);
+            }
             
             // Construire l'email
             $subject = $is_test ? '[TEST] ' : '';
-            $subject .= 'Rapport HelloAsso - ' . date_i18n('d/m/Y');
+            $subject .= 'Rapport HelloAsso - ' . count($events) . ' événement(s) - ' . date_i18n('d/m/Y');
             
             $message = $this->build_email_html($events);
             
