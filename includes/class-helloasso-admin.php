@@ -1,7 +1,7 @@
 <?php
 /**
  * Classe de gestion de l'administration
- * Version avec menus réorganisés : Configuration & Tests fusionnés, Présentation développée, Shortcodes séparés
+ * Version avec option HTML/CSV pour les emails
  */
 
 if (!defined('ABSPATH')) {
@@ -124,6 +124,7 @@ class HelloAsso_Admin {
         
         $event_slugs = array_map('sanitize_text_field', $_POST['event_slugs']);
         $datetime = sanitize_text_field($_POST['new_datetime']);
+        $format = isset($_POST['report_format']) ? sanitize_text_field($_POST['report_format']) : 'html';
         
         $email_settings = $this->email->get_settings();
         
@@ -135,7 +136,8 @@ class HelloAsso_Admin {
             'datetime' => $datetime,
             'sent' => false,
             'event_slugs' => $event_slugs,
-            'recipients' => $recipients
+            'recipients' => $recipients,
+            'format' => $format
         );
         
         $email_settings['schedules'][] = $new_schedule;
@@ -376,13 +378,13 @@ class HelloAsso_Admin {
     }
     
     /**
-     * Ajouter les menus d'administration - RÉORGANISÉS
+     * Ajouter les menus d'administration
      */
     public function add_admin_menu() {
         // Menu principal
         add_menu_page(
             'HelloAsso Events Reports',
-            'HelloAsso Events Reports',
+            'HelloAsso',
             'manage_options',
             'helloasso-events',
             array($this, 'overview_page'),
@@ -390,7 +392,7 @@ class HelloAsso_Admin {
             30
         );
         
-        // Sous-menu : Présentation (développée)
+        // Sous-menu : Présentation
         add_submenu_page(
             'helloasso-events',
             'Présentation',
@@ -400,7 +402,7 @@ class HelloAsso_Admin {
             array($this, 'overview_page')
         );
         
-        // Sous-menu : Shortcodes (NOUVEAU - séparé)
+        // Sous-menu : Shortcodes
         add_submenu_page(
             'helloasso-events',
             'Shortcodes',
@@ -420,7 +422,7 @@ class HelloAsso_Admin {
             array($this, 'email_reports_page')
         );
         
-        // Sous-menu : Configuration & Tests (FUSIONNÉS)
+        // Sous-menu : Configuration & Tests
         add_submenu_page(
             'helloasso-events',
             'Configuration & Tests',
@@ -432,14 +434,14 @@ class HelloAsso_Admin {
     }
     
     /**
-     * Page de présentation (développée) - Inclut le fichier externe
+     * Page de présentation
      */
     public function overview_page() {
         require_once HELLOASSO_PLUGIN_DIR . 'admin/overview-page.php';
     }
     
     /**
-     * Page des shortcodes (NOUVELLE)
+     * Page des shortcodes
      */
     public function shortcodes_page() {
         require_once HELLOASSO_PLUGIN_DIR . 'admin/shortcodes-page.php';
@@ -453,7 +455,7 @@ class HelloAsso_Admin {
     }
     
     /**
-     * Page de configuration & tests (FUSIONNÉE)
+     * Page de configuration & tests
      */
     public function configuration_tests_page() {
         require_once HELLOASSO_PLUGIN_DIR . 'admin/tests-page.php';

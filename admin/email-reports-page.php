@@ -1,7 +1,7 @@
 <?php
 /**
  * Page de configuration des rapports email
- * Version réorganisée avec envoi automatique en premier
+ * Version avec option CSV uniquement dans "Envoi à la demande"
  */
 
 // Empêcher l'accès direct
@@ -105,11 +105,12 @@ $schedules = isset($email_settings['schedules']) ? $email_settings['schedules'] 
             </button>
         </div>
         
-        <!-- ONGLET 1 : Envoi automatique (PAR DÉFAUT) -->
+        <!-- ONGLET 1 : Envoi automatique (HTML uniquement) -->
         <div id="tab-auto" class="schedule-tab-content">
             <div class="notice notice-info inline" style="margin-bottom: 20px;">
                 <p><strong>📆 Envoi automatique</strong> : Configure l'envoi d'un rapport incluant tous les événements ayant lieu le jour même.</p>
                 <p>Le rapport sera envoyé automatiquement chaque jour où au moins un événement est programmé, à l'heure que vous définissez.</p>
+                <p><strong>Note :</strong> Les envois automatiques sont toujours au format HTML.</p>
             </div>
             
             <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" id="auto-schedule-form">
@@ -169,7 +170,7 @@ $schedules = isset($email_settings['schedules']) ? $email_settings['schedules'] 
             </form>
         </div>
         
-        <!-- ONGLET 2 : Envoi à la demande -->
+        <!-- ONGLET 2 : Envoi à la demande (AVEC OPTION CSV) -->
         <div id="tab-manual" class="schedule-tab-content" style="display: none;">
         
         <form method="post" action="<?php echo admin_url('admin-post.php'); ?>" id="schedule-form">
@@ -277,6 +278,30 @@ $schedules = isset($email_settings['schedules']) ? $email_settings['schedules'] 
                 </tbody>
             </table>
             
+            <h3 style="margin-top: 25px;">📄 Format du Rapport</h3>
+            
+            <table class="form-table">
+                <tbody>
+                    <tr>
+                        <th scope="row">Format</th>
+                        <td>
+                            <label style="display: block; margin-bottom: 10px;">
+                                <input type="radio" name="report_format" value="html" checked>
+                                <strong>HTML</strong> - Rapport formaté dans le corps de l'email
+                            </label>
+                            <label style="display: block;">
+                                <input type="radio" name="report_format" value="csv">
+                                <strong>CSV</strong> - Fichier CSV en pièce jointe (compatible Excel)
+                            </label>
+                            <p class="description" style="margin-top: 10px;">
+                                <strong>HTML :</strong> Email avec mise en page visuelle et couleurs (recommandé pour visualisation rapide)<br>
+                                <strong>CSV :</strong> Fichier tableur (.csv) en pièce jointe avec séparateur point-virgule et encodage UTF-8 pour Excel (recommandé pour analyse des données)
+                            </p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+            
             <h3 style="margin-top: 25px;">🕐 Date et Heure d'Envoi</h3>
             
             <table class="form-table">
@@ -344,7 +369,7 @@ $schedules = isset($email_settings['schedules']) ? $email_settings['schedules'] 
     
     <?php if (empty($schedules)): ?>
         <div style="background: #f9f9f9; padding: 20px; text-align: center; border-radius: 5px; margin-top: 20px;">
-            <p style="color: #666; margin: 0;">📭 Aucun envoi programmé pour le moment</p>
+            <p style="color: #666; margin: 0;">🔭 Aucun envoi programmé pour le moment</p>
             <p style="color: #999; font-size: 0.9em; margin: 10px 0 0 0;">Utilisez le formulaire ci-dessus pour programmer un envoi</p>
         </div>
     <?php else: ?>
@@ -352,12 +377,13 @@ $schedules = isset($email_settings['schedules']) ? $email_settings['schedules'] 
         <table class="wp-list-table widefat fixed striped" style="margin-top: 20px; min-width: 1000px;">
             <thead>
                 <tr>
-                    <th style="width: 20%;">Événements</th>
-                    <th style="width: 25%;">Destinataires</th>
-                    <th style="width: 20%;">Date d'envoi (heure locale)</th>
+                    <th style="width: 18%;">Événements</th>
+                    <th style="width: 22%;">Destinataires</th>
+                    <th style="width: 18%;">Date d'envoi (heure locale)</th>
+                    <th style="width: 10%;">Format</th>
                     <th style="width: 10%;">Type</th>
                     <th style="width: 10%;">Statut</th>
-                    <th style="width: 15%;">Actions</th>
+                    <th style="width: 12%;">Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -371,6 +397,7 @@ $schedules = isset($email_settings['schedules']) ? $email_settings['schedules'] 
                     $event_slugs = isset($schedule['event_slugs']) ? $schedule['event_slugs'] : array();
                     $recipients = isset($schedule['recipients']) ? $schedule['recipients'] : $email_settings['email_recipients'];
                     $is_auto = isset($schedule['is_auto']) && $schedule['is_auto'];
+                    $format = isset($schedule['format']) ? $schedule['format'] : 'html';
                     
                     // Convertir en timestamp local
                     $scheduled_time = strtotime($datetime);
@@ -415,6 +442,13 @@ $schedules = isset($email_settings['schedules']) ? $email_settings['schedules'] 
                             <?php endif; ?>
                         </td>
                         <td><?php echo esc_html($formatted_date); ?></td>
+                        <td>
+                            <?php if ($format === 'csv'): ?>
+                                <span style="color: #2196F3;" title="Fichier CSV en pièce jointe">📊 CSV</span>
+                            <?php else: ?>
+                                <span style="color: #666;" title="Email HTML formaté">📄 HTML</span>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <?php if ($is_auto): ?>
                                 <span style="color: #2196F3;" title="Envoi automatique le jour de l'événement">🔄 Auto</span>

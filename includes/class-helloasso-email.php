@@ -1,7 +1,7 @@
 <?php
 /**
  * Classe de gestion des emails
- * Version avec destinataires personnalisés par rapport
+ * Version avec option HTML ou CSV
  */
 
 if (!defined('ABSPATH')) {
@@ -29,6 +29,7 @@ class HelloAsso_Email {
             add_option($this->option_name, array(
                 'enable_email' => false,
                 'email_recipients' => get_option('admin_email'),
+                'email_format' => 'html', // 'html' ou 'csv'
                 'schedules' => array()
             ));
         }
@@ -70,7 +71,7 @@ class HelloAsso_Email {
         $now = current_time('timestamp');
         $updated = false;
         $sent_count = 0;
-        $one_day = 86400; // 24 heures en secondes
+        $one_day = 86400;
         
         foreach ($schedules as $index => $schedule) {
             $scheduled_time = strtotime($schedule['datetime']);
@@ -82,8 +83,6 @@ class HelloAsso_Email {
             
             error_log("HelloAsso CRON: Schedule $index - Prévu: " . date('Y-m-d H:i:s', $scheduled_time) . " | Envoyé: " . ($is_sent ? 'OUI' : 'NON') . " | Diff: {$time_diff}s");
             
-            // Fenêtre d'envoi : de l'heure prévue jusqu'à 24h après
-            // Si l'heure est passée ET moins de 24h ET pas encore envoyé
             if (!$is_sent && $scheduled_time <= $now && $time_diff < $one_day) {
                 error_log("HelloAsso CRON: Envoi du schedule $index à $recipients");
                 
@@ -126,7 +125,6 @@ class HelloAsso_Email {
                 throw new Exception('Aucun événement sélectionné');
             }
             
-            // Récupérer tous les événements
             $events_data = $this->api->get_events();
             
             if (!$events_data || !isset($events_data['data']) || empty($events_data['data'])) {
@@ -158,25 +156,62 @@ class HelloAsso_Email {
                 return $date_a - $date_b;
             });
             
-            // Construire l'email
+            $settings = $this->get_settings();
+            $email_format = isset($settings['email_format']) ? $settings['email_format'] : 'html';
+            
+            // Construire l'email selon le format choisi
             $subject = $is_test ? '[TEST] ' : '';
             $subject .= 'Rapport HelloAsso - ' . count($selected_events) . ' événement(s) - ' . date_i18n('d/m/Y');
             
-            $message = $this->build_email_html($selected_events);
-            
-            $headers = array(
-                'Content-Type: text/html; charset=UTF-8',
-                'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
-            );
-            
             $recipients_array = array_map('trim', explode(',', $recipients));
+            
+            if ($email_format === 'csv') {
+                // Format CSV avec pièce jointe
+                $csv_content = $this->generate_csv($selected_events);
+                $csv_filename = 'rapport-helloasso-' . date('Y-m-d-His') . '.csv';
+                
+                // Message simple pour le corps de l'email
+                $message = "Bonjour,\n\n";
+                $message .= "Veuillez trouver ci-joint le rapport HelloAsso pour " . count($selected_events) . " événement(s).\n\n";
+                $message .= "Date du rapport : " . date_i18n('d/m/Y à H:i') . "\n\n";
+                $message .= "Cordialement,\n";
+                $message .= get_bloginfo('name');
+                
+                $headers = array(
+                    'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+                );
+                
+                // Sauvegarder temporairement le CSV
+                $upload_dir = wp_upload_dir();
+                $temp_file = $upload_dir['path'] . '/' . $csv_filename;
+                file_put_contents($temp_file, $csv_content);
+                
+                $attachments = array($temp_file);
+                
+                $result = wp_mail($recipients_array, $subject, $message, $headers, $attachments);
+                
+                // Supprimer le fichier temporaire
+                if (file_exists($temp_file)) {
+                    unlink($temp_file);
+                }
+                
+            } else {
+                // Format HTML (par défaut)
+                $message = $this->build_email_html($selected_events);
+                
+                $headers = array(
+                    'Content-Type: text/html; charset=UTF-8',
+                    'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+                );
+                
+                $result = wp_mail($recipients_array, $subject, $message, $headers);
+            }
             
             if ($is_test) {
                 error_log('HelloAsso Test Email - Recipients: ' . implode(', ', $recipients_array));
+                error_log('HelloAsso Test Email - Format: ' . $email_format);
                 error_log('HelloAsso Test Email - Events count: ' . count($selected_events));
             }
-            
-            $result = wp_mail($recipients_array, $subject, $message, $headers);
             
             if (!$result && $is_test) {
                 global $phpmailer;
@@ -199,94 +234,7 @@ class HelloAsso_Email {
     }
     
     /**
-     * Envoyer un email de test simple (sans récupération d'événements)
-     */
-    public function send_simple_test_email() {
-        try {
-            $settings = $this->get_settings();
-            
-            if (empty($settings['email_recipients'])) {
-                throw new Exception('Aucun destinataire configuré');
-            }
-            
-            $subject = '[TEST SIMPLE] Email de test HelloAsso - ' . date_i18n('d/m/Y H:i:s');
-            
-            $message = '<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="UTF-8">
-    <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: #28a745; color: white; padding: 20px; text-align: center; border-radius: 5px; }
-        .content { background: #f9f9f9; padding: 20px; margin: 20px 0; border-radius: 5px; }
-        .footer { text-align: center; padding: 20px; color: #999; font-size: 0.9em; }
-        .success { background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin: 15px 0; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>✅ Email de Test Simple</h1>
-            <p>Plugin HelloAsso Events Reports</p>
-        </div>
-        
-        <div class="content">
-            <div class="success">
-                <strong>✓ Succès !</strong> Si vous recevez cet email, votre configuration email fonctionne correctement.
-            </div>
-            
-            <h2>Informations du test</h2>
-            <ul>
-                <li><strong>Date et heure :</strong> ' . date_i18n('d/m/Y à H:i:s') . '</li>
-                <li><strong>Site WordPress :</strong> ' . get_bloginfo('name') . '</li>
-                <li><strong>URL du site :</strong> ' . get_bloginfo('url') . '</li>
-                <li><strong>Fuseau horaire :</strong> ' . wp_timezone_string() . '</li>
-            </ul>
-            
-            <h3>📌 Prochaines étapes</h3>
-            <p>Maintenant que l\'envoi d\'email fonctionne, vous pouvez tester l\'envoi complet avec récupération des événements HelloAsso.</p>
-        </div>
-        
-        <div class="footer">
-            <p>Email de test envoyé depuis ' . get_bloginfo('name') . '</p>
-            <p><small>Plugin HelloAsso Events Reports v' . HELLOASSO_VERSION . '</small></p>
-        </div>
-    </div>
-</body>
-</html>';
-            
-            $headers = array(
-                'Content-Type: text/html; charset=UTF-8',
-                'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
-            );
-            
-            $recipients = array_map('trim', explode(',', $settings['email_recipients']));
-            
-            error_log('HelloAsso Simple Test Email - Recipients: ' . implode(', ', $recipients));
-            
-            $result = wp_mail($recipients, $subject, $message, $headers);
-            
-            if (!$result) {
-                global $phpmailer;
-                if (isset($phpmailer) && $phpmailer->ErrorInfo) {
-                    throw new Exception('Erreur PHPMailer: ' . $phpmailer->ErrorInfo);
-                } else {
-                    throw new Exception('wp_mail() a retourné false. Vérifiez la configuration email du serveur.');
-                }
-            }
-            
-            return $result;
-            
-        } catch (Exception $e) {
-            error_log('HelloAsso Simple Test Email Error: ' . $e->getMessage());
-            throw $e;
-        }
-    }
-    
-    /**
      * Envoyer le rapport par email (pour les tests)
-     * CORRIGÉ : Limite à 3 événements pour les tests
      */
     public function send_report($is_test = false) {
         try {
@@ -296,11 +244,10 @@ class HelloAsso_Email {
                 throw new Exception('Aucun destinataire configuré');
             }
             
-            // Récupérer les événements
             $events_data = $this->api->get_events();
             
             if (!$events_data || !isset($events_data['data']) || empty($events_data['data'])) {
-                throw new Exception('Aucun événement trouvé dans HelloAsso');
+                throw new Exception('Aucun événement trouvé');
             }
             
             // Trier par date
@@ -311,30 +258,57 @@ class HelloAsso_Email {
                 return $date_a - $date_b;
             });
             
-            // ✅ CORRECTION : Limiter à 3 événements pour le test
-            if ($is_test) {
-                $events = array_slice($events, 0, 3);
-            }
+            $email_format = isset($settings['email_format']) ? $settings['email_format'] : 'html';
             
-            // Construire l'email
             $subject = $is_test ? '[TEST] ' : '';
-            $subject .= 'Rapport HelloAsso - ' . count($events) . ' événement(s) - ' . date_i18n('d/m/Y');
-            
-            $message = $this->build_email_html($events);
-            
-            $headers = array(
-                'Content-Type: text/html; charset=UTF-8',
-                'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
-            );
+            $subject .= 'Rapport HelloAsso - ' . date_i18n('d/m/Y');
             
             $recipients = array_map('trim', explode(',', $settings['email_recipients']));
             
-            if ($is_test) {
-                error_log('HelloAsso Test Email - Recipients: ' . implode(', ', $recipients));
-                error_log('HelloAsso Test Email - Events count: ' . count($events));
+            if ($email_format === 'csv') {
+                // Format CSV
+                $csv_content = $this->generate_csv($events);
+                $csv_filename = 'rapport-helloasso-' . date('Y-m-d-His') . '.csv';
+                
+                $message = "Bonjour,\n\n";
+                $message .= "Veuillez trouver ci-joint le rapport HelloAsso.\n\n";
+                $message .= "Date du rapport : " . date_i18n('d/m/Y à H:i') . "\n\n";
+                $message .= "Cordialement,\n";
+                $message .= get_bloginfo('name');
+                
+                $headers = array(
+                    'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+                );
+                
+                $upload_dir = wp_upload_dir();
+                $temp_file = $upload_dir['path'] . '/' . $csv_filename;
+                file_put_contents($temp_file, $csv_content);
+                
+                $attachments = array($temp_file);
+                
+                $result = wp_mail($recipients, $subject, $message, $headers, $attachments);
+                
+                if (file_exists($temp_file)) {
+                    unlink($temp_file);
+                }
+                
+            } else {
+                // Format HTML
+                $message = $this->build_email_html($events);
+                
+                $headers = array(
+                    'Content-Type: text/html; charset=UTF-8',
+                    'From: ' . get_bloginfo('name') . ' <' . get_option('admin_email') . '>'
+                );
+                
+                $result = wp_mail($recipients, $subject, $message, $headers);
             }
             
-            $result = wp_mail($recipients, $subject, $message, $headers);
+            if ($is_test) {
+                error_log('HelloAsso Test Email - Recipients: ' . implode(', ', $recipients));
+                error_log('HelloAsso Test Email - Format: ' . $email_format);
+                error_log('HelloAsso Test Email - Events count: ' . count($events));
+            }
             
             if (!$result && $is_test) {
                 global $phpmailer;
@@ -356,6 +330,83 @@ class HelloAsso_Email {
         }
     }
     
+    /**
+     * Générer le contenu CSV
+     */
+ private function generate_csv($events) {
+    $csv_data = array();
+
+    // En-têtes
+    $csv_data[] = array(
+        'Événement',
+        'Date',
+        'Heure',
+        'État',
+        'Catégorie',
+        'Places vendues',
+        'URL'
+    );
+
+    // Données
+    foreach ($events as $event) {
+        $sold_data = $this->api->get_event_sold_count($event['formSlug']);
+
+        $title = $event['title'];
+        $date = 'Non définie';
+        $time = 'Non définie';
+        if (!empty($event['startDate'])) {
+            $dateTime = new DateTime($event['startDate']);
+            $date = $dateTime->format('d/m/Y');
+            $time = $dateTime->format('H:i');
+        }
+        $state = $event['state'] ?? 'N/A';
+        $url = $event['url'] ?? '';
+
+        // Si aucune catégorie, on ajoute une ligne avec "N/A"
+        if (empty($sold_data['tiers'])) {
+            $csv_data[] = array(
+                $title,
+                $date,
+                $time,
+                $state,
+                'N/A',
+                '0',
+                $url
+            );
+            continue;
+        }
+
+        // Une ligne par catégorie
+        foreach ($sold_data['tiers'] as $tier_name => $tier_count) {
+            $csv_data[] = array(
+                $title,
+                $date,
+                $time,
+                $state,
+                $tier_name,
+                $tier_count,
+                $url
+            );
+        }
+    }
+
+    // Convertir en CSV
+    $output = fopen('php://temp', 'r+');
+
+    // Ajouter le BOM UTF-8 pour Excel
+    fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+
+    foreach ($csv_data as $row) {
+        fputcsv($output, $row, ';');
+    }
+
+    rewind($output);
+    $csv_content = stream_get_contents($output);
+    fclose($output);
+
+    return $csv_content;
+}
+
     /**
      * Construire le HTML de l'email
      */
