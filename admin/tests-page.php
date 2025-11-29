@@ -49,26 +49,12 @@ if (isset($_POST['test_connection']) && check_admin_referer('helloasso_test_conn
     echo '</div>';
 }
 
-// Traiter le test d'email simple
-if (isset($_POST['send_simple_test_email']) && check_admin_referer('helloasso_simple_test_email', 'helloasso_simple_email_nonce')) {
-    try {
-        $result = $plugin->email->send_simple_test_email();
-        if ($result) {
-            echo '<div class="notice notice-success"><p>✓ Email de test simple envoyé avec succès ! Vérifiez votre boîte de réception.</p></div>';
-        } else {
-            echo '<div class="notice notice-error"><p>✗ Erreur lors de l\'envoi. Vérifiez que wp_mail() fonctionne sur votre serveur.</p></div>';
-        }
-    } catch (Exception $e) {
-        echo '<div class="notice notice-error"><p>✗ Erreur : ' . esc_html($e->getMessage()) . '</p></div>';
-    }
-}
-
-// Traiter le test d'email avec événements
-if (isset($_POST['send_full_test_email']) && check_admin_referer('helloasso_full_test_email', 'helloasso_full_email_nonce')) {
+// Traiter le test d'email
+if (isset($_POST['send_test_email']) && check_admin_referer('helloasso_test_email', 'helloasso_email_nonce')) {
     try {
         $result = $plugin->email->send_report(true);
         if ($result) {
-            echo '<div class="notice notice-success"><p>✓ Email de test avec événements envoyé avec succès ! Vérifiez votre boîte de réception.</p></div>';
+            echo '<div class="notice notice-success"><p>✓ Email de test envoyé avec succès !</p></div>';
         } else {
             echo '<div class="notice notice-error"><p>✗ Erreur lors de l\'envoi. Vérifiez que wp_mail() fonctionne sur votre serveur.</p></div>';
         }
@@ -102,7 +88,7 @@ if (isset($_POST['clear_cache']) && check_admin_referer('helloasso_clear_cache',
     <h2 class="nav-tab-wrapper">
         <a href="#tab-config" class="nav-tab nav-tab-active" data-tab="config">🔐 Configuration API</a>
         <a href="#tab-tests" class="nav-tab" data-tab="tests">🧪 Tests</a>
-        <a href="#tab-cron" class="nav-tab" data-tab="cron">🔔 Configuration CRON</a>
+        <a href="#tab-cron" class="nav-tab" data-tab="cron">⏰ Configuration CRON</a>
         <a href="#tab-troubleshooting" class="nav-tab" data-tab="troubleshooting">🔧 Dépannage</a>
         <a href="#tab-system" class="nav-tab" data-tab="system">💻 Informations Système</a>
     </h2>
@@ -229,54 +215,33 @@ define('HELLOASSO_ORGANIZATION_SLUG', 'votre_organization_slug_ici');</pre>
         
         <hr>
         
-        <h3>Tests d'envoi d'email</h3>
+        <h3>Test d'envoi d'email</h3>
         
-        <?php
-        $email_settings = $plugin->email->get_settings();
-        $recipients = $email_settings['email_recipients'] ?? get_option('admin_email');
-        ?>
-        
-        <!-- Test Email Simple -->
-        <div style="background: #e3f2fd; border: 2px solid #2196F3; padding: 20px; border-radius: 5px; margin: 20px 0;">
-            <h4 style="margin-top: 0; color: #2196F3;">📧 Test 1 : Email simple (recommandé en premier)</h4>
-            <p>Ce test vérifie la configuration email de base de WordPress <strong>sans</strong> récupérer les événements HelloAsso.</p>
-            <p><strong>Utilisation :</strong> Commencez par ce test pour vérifier que votre serveur peut envoyer des emails.</p>
-            
-            <p style="background: white; padding: 10px; border-radius: 3px; margin: 15px 0;">
-                <strong>Destinataires :</strong> <?php echo esc_html($recipients); ?>
-            </p>
-            
-            <form method="post" action="">
-                <?php wp_nonce_field('helloasso_simple_test_email', 'helloasso_simple_email_nonce'); ?>
-                <input type="submit" name="send_simple_test_email" class="button button-primary" value="📨 Envoyer un email de test simple">
-            </form>
-        </div>
-        
-        <!-- Test Email Complet -->
         <div style="background: #f9f9f9; padding: 20px; border-radius: 5px; margin: 20px 0;">
-            <h4 style="margin-top: 0;">📊 Test 2 : Email avec événements HelloAsso</h4>
-            <p>Ce test envoie un email avec les 3 prochains événements HelloAsso et leurs statistiques.</p>
-            <p><strong>Utilisation :</strong> Une fois le test simple réussi, utilisez ce test pour vérifier que tout fonctionne ensemble.</p>
+            <p>Ce test envoie un email HTML avec tous les événements aux destinataires configurés.</p>
             
-            <p style="background: white; padding: 10px; border-radius: 3px; margin: 15px 0;">
-                <strong>Destinataires :</strong> <?php echo esc_html($recipients); ?>
-            </p>
+            <?php
+            $email_settings = $plugin->email->get_settings();
+            $recipients = $email_settings['email_recipients'] ?? get_option('admin_email');
+            ?>
+            
+            <p><strong>Destinataires actuels :</strong> <?php echo esc_html($recipients); ?></p>
             <p><small>Pour modifier les destinataires, allez dans "Rapports email"</small></p>
             
             <form method="post" action="">
-                <?php wp_nonce_field('helloasso_full_test_email', 'helloasso_full_email_nonce'); ?>
-                <input type="submit" name="send_full_test_email" class="button button-secondary" value="📬 Envoyer un email de test complet">
+                <?php wp_nonce_field('helloasso_test_email', 'helloasso_email_nonce'); ?>
+                <input type="submit" name="send_test_email" class="button button-secondary" value="📨 Envoyer un email de test">
             </form>
-        </div>
-        
-        <div class="notice notice-warning inline" style="margin-top: 20px;">
-            <p><strong>⚠️ Dépannage :</strong> Si les tests d'envoi échouent :</p>
-            <ul>
-                <li>Vérifiez que PHP peut envoyer des emails (fonction <code>mail()</code>)</li>
-                <li>Installez un plugin SMTP comme "WP Mail SMTP" ou "Post SMTP"</li>
-                <li>Vérifiez vos logs d'erreurs PHP</li>
-                <li>Vérifiez le dossier spam de votre boîte mail</li>
-            </ul>
+            
+            <div class="notice notice-warning inline" style="margin-top: 20px;">
+                <p><strong>⚠️ Dépannage :</strong> Si l'envoi de test échoue :</p>
+                <ul>
+                    <li>Vérifiez que PHP peut envoyer des emails (fonction <code>mail()</code>)</li>
+                    <li>Installez un plugin SMTP comme "WP Mail SMTP" ou "Post SMTP"</li>
+                    <li>Vérifiez vos logs d'erreurs PHP</li>
+                    <li>Vérifiez le dossier spam de votre boîte mail</li>
+                </ul>
+            </div>
         </div>
         
         <hr>
@@ -299,7 +264,7 @@ define('HELLOASSO_ORGANIZATION_SLUG', 'votre_organization_slug_ici');</pre>
 
     <!-- TAB 3 : Configuration CRON -->
     <div id="tab-cron" class="tab-content" style="display: none;">
-        <h2>🔔 Configuration du CRON Système</h2>
+        <h2>⏰ Configuration du CRON Système</h2>
         
         <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 20px; border-radius: 5px; margin: 20px 0;">
             <h3 style="margin-top: 0;">Pourquoi configurer un CRON ?</h3>
@@ -390,10 +355,9 @@ define('HELLOASSO_ORGANIZATION_SLUG', 'votre_organization_slug_ici');</pre>
             <div style="padding: 20px 0;">
                 <h4>Vérifications :</h4>
                 <ol style="line-height: 2;">
-                    <li>Commencez par le <strong>test d'email simple</strong> dans l'onglet "Tests"</li>
                     <li>Vérifier que les rapports sont activés dans "HelloAsso > Rapports email"</li>
                     <li>Vérifier qu'au moins un destinataire est configuré</li>
-                    <li>Si le test simple réussit, essayez le test complet avec événements</li>
+                    <li>Tester l'envoi immédiat dans l'onglet "Tests"</li>
                     <li>Vérifier que le CRON est bien configuré et s'exécute</li>
                     <li>Consulter les logs PHP (voir onglet "Informations Système")</li>
                     <li>Installer un plugin SMTP fiable (WP Mail SMTP, Post SMTP)</li>
@@ -454,6 +418,22 @@ define('HELLOASSO_ORGANIZATION_SLUG', 'votre_organization_slug_ici');</pre>
                     <li>Attendez 5 minutes (durée du cache)</li>
                     <li>Vérifiez directement sur HelloAsso</li>
                     <li>Utilisez le mode debug : ajoutez <code>?debug_ha</code> à l'URL de votre page</li>
+                </ol>
+            </div>
+        </details>
+
+        <details style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #ddd;">
+            <summary style="cursor: pointer; font-weight: bold; padding: 10px; background: #fff; margin: -15px; border-radius: 5px;">
+                ❌ Le fichier CSV n'est pas en pièce jointe
+            </summary>
+            <div style="padding: 20px 0;">
+                <h4>Solutions :</h4>
+                <ol style="line-height: 2;">
+                    <li>Vérifiez les permissions du dossier <code>wp-content/uploads/</code> (doit être 755 ou 775)</li>
+                    <li>Activez WP_DEBUG dans wp-config.php et consultez les logs</li>
+                    <li>Vérifiez que PHP peut écrire dans le dossier uploads</li>
+                    <li>Testez avec un plugin SMTP (WP Mail SMTP, Post SMTP)</li>
+                    <li>Consultez les logs dans l'onglet "Informations Système"</li>
                 </ol>
             </div>
         </details>
@@ -539,6 +519,22 @@ define('HELLOASSO_ORGANIZATION_SLUG', 'votre_organization_slug_ici');</pre>
                     <td style="padding: 12px;"><strong>Temps d'exécution max</strong></td>
                     <td style="padding: 12px;"><?php echo ini_get('max_execution_time'); ?> secondes</td>
                 </tr>
+                <tr style="background: #f9f9f9;">
+                    <td style="padding: 12px;"><strong>Dossier uploads</strong></td>
+                    <td style="padding: 12px;">
+                        <?php 
+                        $upload_dir = wp_upload_dir();
+                        $writable = is_writable($upload_dir['path']);
+                        ?>
+                        <?php if ($writable): ?>
+                            <span style="color: #28a745;">✓ Accessible en écriture</span>
+                            <br><small style="color: #666;"><?php echo esc_html($upload_dir['path']); ?></small>
+                        <?php else: ?>
+                            <span style="color: #dc3545;">✗ Non accessible en écriture</span>
+                            <br><small style="color: #666;"><?php echo esc_html($upload_dir['path']); ?></small>
+                        <?php endif; ?>
+                    </td>
+                </tr>
             </tbody>
         </table>
 
@@ -597,7 +593,7 @@ define('WP_DEBUG_DISPLAY', false);</pre>
 
         <hr style="margin: 40px 0;">
 
-        <h3>🔍 Informations de Cache</h3>
+        <h3>🗂️ Informations de Cache</h3>
 
         <table class="widefat" style="max-width: 800px; margin: 20px 0;">
             <thead>
@@ -642,9 +638,10 @@ define('WP_DEBUG_DISPLAY', false);</pre>
         </table>
 
         <p style="margin-top: 20px;">
-            <a href="<?php echo add_query_arg('action', 'clear_cache'); ?>" class="button">
-                🗑️ Vider tous les caches
-            </a>
+            <form method="post" action="" style="display: inline;">
+                <?php wp_nonce_field('helloasso_clear_cache', 'helloasso_cache_nonce'); ?>
+                <input type="submit" name="clear_cache" class="button" value="🗑️ Vider tous les caches">
+            </form>
         </p>
     </div>
 
