@@ -3,7 +3,7 @@
  * Plugin Name: HelloAsso Events Reports
  * Plugin URI: https://example.com/helloasso-events
  * Description: Affiche les événements HelloAsso avec le nombre de places vendues
- * Version: 2.0.0
+ * Version: 2.1.0
  * Author: Alain Fiala
  * License: GPL v2 or later
  * Text Domain: helloasso-events
@@ -17,7 +17,7 @@ if (!defined('ABSPATH')) {
 // Définir les constantes du plugin
 define('HELLOASSO_PLUGIN_DIR', plugin_dir_path(__FILE__));
 define('HELLOASSO_PLUGIN_URL', plugin_dir_url(__FILE__));
-define('HELLOASSO_VERSION', '2.0.0');
+define('HELLOASSO_VERSION', '2.1.0');
 
 // Charger les fichiers du plugin
 require_once HELLOASSO_PLUGIN_DIR . 'includes/class-helloasso-api.php';
@@ -66,12 +66,32 @@ class HelloAsso_Events_Reports {
         
         // Initialiser les options
         $this->email->init_options();
+        
+        // Créer le dossier temp s'il n'existe pas
+        $temp_dir = WP_CONTENT_DIR . '/temp';
+        if (!file_exists($temp_dir)) {
+            wp_mkdir_p($temp_dir);
+            // Créer un fichier .htaccess pour protéger le dossier
+            $htaccess_content = "# Protect temp directory\n<Files *.csv>\n  Order Allow,Deny\n  Deny from all\n</Files>";
+            file_put_contents($temp_dir . '/.htaccess', $htaccess_content);
+        }
     }
     
     public function deactivate() {
         // Nettoyer les transients
         delete_transient('helloasso_access_token');
         delete_transient('helloasso_events_cache');
+        
+        // Nettoyer les fichiers CSV temporaires
+        $temp_dir = WP_CONTENT_DIR . '/temp';
+        if (file_exists($temp_dir)) {
+            $files = glob($temp_dir . '/rapport-helloasso-*.csv');
+            foreach ($files as $file) {
+                if (is_file($file)) {
+                    unlink($file);
+                }
+            }
+        }
     }
     
     public function enqueue_frontend_assets() {

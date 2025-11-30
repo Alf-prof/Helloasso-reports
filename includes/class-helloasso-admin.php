@@ -384,7 +384,7 @@ class HelloAsso_Admin {
         // Menu principal
         add_menu_page(
             'HelloAsso Events Reports',
-            'HelloAsso',
+            'HelloAsso Events Reports',
             'manage_options',
             'helloasso-events',
             array($this, 'overview_page'),
