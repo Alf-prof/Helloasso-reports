@@ -1,24 +1,10 @@
 # Plugin WordPress - HelloAsso Events Reports v2.0
 
-Plugin WordPress pour afficher les événements HelloAsso avec le nombre de places vendues en temps réel.
+Ce plugin permet d'afficher sur votre site WEB, via des shortcode, des informations, récupérées sur Helloasso. Il permet d'afficher le nombres de places vendues pour des événements, afficher le nombre de place par catégories, ou le nombre de places restantes...  
 
-## 📦 Structure des fichiers
+Il permet aussi de programmer l'envoi d'email, contenant les places vendues sous format HTML ou CSV. Cette programmation se fera simplement, en sélectionnant l'événement, la date et l'expéditeur. 
 
-```
-helloasso-events/
-├── helloasso-events.php          # Fichier principal du plugin
-├── includes/                      # Classes PHP
-│   ├── class-helloasso-api.php   # Gestion de l'API HelloAsso
-│   ├── class-helloasso-email.php # Gestion des emails
-│   ├── class-helloasso-admin.php # Interface d'administration
-│   └── class-helloasso-shortcode.php # Shortcode d'affichage
-├── admin/                         # Pages d'administration
-│   ├── tests-page.php            # Page de tests
-│   └── email-reports-page.php    # Page de configuration emails
-├── assets/
-│   └── style.css                 # Styles CSS
-└── README.md                     # Documentation
-```
+Un paramètre permet aussi de programmer, sur tous les événements en même temps, l'envoi des réservations des événements qui ont lieu le même jour, en indiquant seulement l'heure d'envoi et les destinataires. 
 
 ## 📋 Installation
 
@@ -65,16 +51,19 @@ define('HELLOASSO_ORGANIZATION_SLUG', 'votre_organization_slug');
 Le plugin ajoute un menu **"HelloAsso"** avec 3 sous-menus :
 
 #### 1. **Présentation**
+
 - Vue d'ensemble de la configuration
 - Vérification des identifiants
 - Instructions d'utilisation du shortcode
 
 #### 2. **Tests**
+
 - Test de connexion à l'API HelloAsso
 - Test d'envoi d'email
 - Vider les caches
 
 #### 3. **Rapports email**
+
 - Configuration des destinataires
 - Programmation d'envois à dates précises
 - Liste des envois programmés
@@ -168,6 +157,7 @@ Pour chaque événement :
 ## 📝 Changelog
 
 ### Version 2.0.0
+
 - ✅ Refactorisation complète en classes séparées
 - ✅ Menu réorganisé (Présentation, Tests, Rapports email)
 - ✅ Programmation d'envois à dates précises
@@ -175,6 +165,7 @@ Pour chaque événement :
 - ✅ Debug amélioré
 
 ### Version 1.0.0
+
 - Version initiale
 
 ## 📄 Licence
