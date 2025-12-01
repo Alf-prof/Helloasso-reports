@@ -6,6 +6,18 @@ Il permet aussi de programmer l'envoi d'email, contenant les places vendues sous
 
 Un paramètre permet aussi de programmer, sur tous les événements en même temps, l'envoi des réservations des événements qui ont lieu le même jour, en indiquant seulement l'heure d'envoi et les destinataires. 
 
+Le rapport sera envoyé automatiquement chaque jour où au moins un événement est programmé, à l'heure que vous avez définie.
+
+#### Envoi à la demande
+
+![](C:\Users\Alain\AppData\Roaming\marktext\images\2025-12-01-17-52-33-image.png)
+
+#### Envoi automatique
+
+<img src="file:///C:/Users/Alain/AppData/Roaming/marktext/images/2025-12-01-17-50-35-image.png" title="" alt="" data-align="center">
+
+
+
 ## 📋 Installation
 
 ### 1. Structure des fichiers
