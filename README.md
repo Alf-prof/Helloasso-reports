@@ -10,13 +10,11 @@ Le rapport sera envoyé automatiquement chaque jour où au moins un événement 
 
 #### Envoi à la demande
 
-![](C:\Users\Alain\AppData\Roaming\marktext\images\2025-12-01-17-52-33-image.png)
+<img title="" src="./images/envoi-a-la-demande.png" alt="" data-align="center">
 
 #### Envoi automatique
 
-<img src="file:///C:/Users/Alain/AppData/Roaming/marktext/images/2025-12-01-17-50-35-image.png" title="" alt="" data-align="center">
-
-
+<img title="" src="./images/envoi-auto.png" alt="" data-align="center">
 
 ## 📋 Installation
 
