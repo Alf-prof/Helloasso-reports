@@ -286,7 +286,7 @@ class HelloAsso_Shortcode {
                     $count++;
                     ?>
                     <div class="helloasso-event <?php echo $is_sold_out ? 'sold-out' : ''; ?>">
-                        <div class="event-header">
+                        <div class="event-header" style="padding-top: 30px;">
                             <h3 class="event-title"><?php echo $title; ?></h3>
                             <span class="event-state state-<?php echo strtolower($state); ?>"><?php echo $state; ?></span>
                         </div>
