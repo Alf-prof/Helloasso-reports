@@ -1,4 +1,4 @@
-# Plugin WordPress - HelloAsso Events Reports v2.0
+# Plugin WordPress - HelloAsso Events Reports v1.0
 
 Ce plugin permet d'afficher sur votre site WEB, via des shortcode, des informations, récupérées sur Helloasso. Il permet d'afficher le nombres de places vendues pour des événements, afficher le nombre de place par catégories, ou le nombre de places restantes...  
 
@@ -166,16 +166,13 @@ Pour chaque événement :
 
 ## 📝 Changelog
 
-### Version 2.0.0
+### Version 1.0.0
 
 - ✅ Refactorisation complète en classes séparées
 - ✅ Menu réorganisé (Présentation, Tests, Rapports email)
 - ✅ Programmation d'envois à dates précises
 - ✅ Meilleure gestion des erreurs
 - ✅ Debug amélioré
-
-### Version 1.0.0
-
 - Version initiale
 
 ## 📄 Licence
