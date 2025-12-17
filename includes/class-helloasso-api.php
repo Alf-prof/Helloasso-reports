@@ -215,7 +215,9 @@ class HelloAsso_API {
         }
         
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
+        if (PHP_VERSION_ID < 80000) {
+            curl_close($ch);
+        }
         
         if ($http_code !== 200) {
             return null;

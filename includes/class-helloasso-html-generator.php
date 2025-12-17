@@ -56,8 +56,7 @@ class HelloAsso_HTML_Generator {
                     foreach ($events as $event):
                         $sold_data = $this->api->get_event_sold_count($event['formSlug']);
                         $title = esc_html($event['title']);
-                        $date = !empty($event['startDate']) ? date_i18n('d/m/Y à H:i', strtotime($event['startDate'])) : 'Date non définie';
-                        $url = esc_url($event['url'] ?? '#');
+                        $date = !empty($event['startDate']) ? wp_date('d/m/Y à H:i', strtotime($event['startDate'])) : 'Date non définie';$url = esc_url($event['url'] ?? '#');
                         ?>
                         <div class="event">
                             <h2 class="event-title"><?php echo $title; ?></h2>
